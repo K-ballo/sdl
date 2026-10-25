@@ -1,0 +1,79 @@
+# Eggs.SDL
+#
+# Copyright (c) 2026 Agustin Berge
+#
+# Distributed under the Boost Software License, Version 1.0.
+# See accompanying file LICENSE.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt
+
+name: Install SDL3
+description: Build SDL3 from source, install it, and point SDL3_ROOT at it.
+
+inputs:
+  ref:
+    description: SDL release tag to build
+    required: false
+    default: release-3.2.0
+
+runs:
+  using: composite
+  steps:
+    # Workflows that install a toolchain PPA first can end up with a newer
+    # libc6; an SDL3 built against it does not link against the stock one.
+    - name: Detect libc version
+      id: libc
+      shell: bash
+      run: |
+        if [ "${RUNNER_OS}" = "Linux" ]; then
+          echo "version=glibc-$(getconf GNU_LIBC_VERSION | cut -d' ' -f2)" >> "${GITHUB_OUTPUT}"
+        fi
+
+    - name: Cache SDL3
+      id: sdl3_cache
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.temp }}/sdl3
+        key: sdl3-v4-${{ runner.os }}-${{ env.ImageOS }}-${{ steps.libc.outputs.version }}-${{ runner.arch }}-${{ inputs.ref }}-${{ hashFiles('.github/actions/install-sdl/action.yml') }}
+
+    - name: Set up MSVC environment
+      if: runner.os == 'Windows' && steps.sdl3_cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        if (-not (Get-Command cl -ErrorAction SilentlyContinue)) {
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+              -latest -property installationPath
+          $vcvars = "$vsPath\VC\Auxiliary\Build\vcvars64.bat"
+          cmd /c "`"$vcvars`" && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              "$($Matches[1])=$($Matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            }
+          }
+        }
+
+    - name: Build SDL3
+      if: steps.sdl3_cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        src="${RUNNER_TEMP}/sdl3-src"
+        git clone --depth 1 --branch "${{ inputs.ref }}" https://github.com/libsdl-org/SDL.git "${src}"
+
+        # The tests use the dummy video driver, so no X11 or Wayland is needed.
+        extra_args=()
+        if [ "${RUNNER_OS}" = "Linux" ]; then
+          extra_args+=(-DSDL_UNIX_CONSOLE_BUILD=ON)
+        fi
+
+        cmake -S "${src}" -B "${RUNNER_TEMP}/sdl3-build" -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
+          "${extra_args[@]}" -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/sdl3"
+        cmake --build "${RUNNER_TEMP}/sdl3-build"
+        cmake --install "${RUNNER_TEMP}/sdl3-build"
+
+    - name: Point SDL3_ROOT at SDL3
+      shell: bash
+      run: |
+        echo "SDL3_ROOT=${RUNNER_TEMP}/sdl3" >> "${GITHUB_ENV}"
+        # Let consumers find SDL3.dll; a missing DLL pops a modal loader dialog.
+        if [ "${RUNNER_OS}" = "Windows" ]; then
+          cygpath -w "${RUNNER_TEMP}/sdl3/bin" >> "${GITHUB_PATH}"
+        fi

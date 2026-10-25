@@ -1,0 +1,111 @@
+# Eggs.SDL
+#
+# Copyright (c) 2026 Agustin Berge
+#
+# Distributed under the Boost Software License, Version 1.0.
+# See accompanying file LICENSE.txt or copy at
+# http://www.boost.org/LICENSE_1_0.txt
+
+name: sanitize
+
+on:
+  push:
+    branches: [ main, feature/** ]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  asan:
+    name: ubuntu-24.04 / ASan + UBSan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "4.4.0"
+
+      - name: Set up APT package cache
+        run: |
+          mkdir -p ~/.cache/apt/archives/partial
+          echo "Dir::Cache::archives \"$HOME/.cache/apt/archives\";" \
+            | sudo tee /etc/apt/apt.conf.d/99user-cache
+
+      - name: Cache APT packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/apt/archives
+          key: apt-ubuntu-24.04-clang-22-${{ hashFiles('.github/workflows/sanitize.yml') }}
+          restore-keys: apt-ubuntu-24.04-clang-22-
+
+      - name: Install Clang 22
+        run: |
+          wget -q https://apt.llvm.org/llvm.sh
+          sudo bash llvm.sh 22 all
+          sudo update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-22   200
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-22 200
+
+      - name: Fix APT cache permissions
+        if: always()
+        run: sudo rm -rf ~/.cache/apt/archives/lock ~/.cache/apt/archives/partial
+
+      - name: Install SDL3
+        uses: ./.github/actions/install-sdl
+
+      - name: Configure
+        run: cmake --preset asan -B build/asan
+
+      - name: Build
+        run: cmake --build --preset asan
+
+      - name: Test
+        run: ctest --preset asan
+
+  asan-win32:
+    name: windows-2025-vs2026 / ASan / MSVC
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "4.4.0"
+
+      - name: Set up MSVC environment
+        shell: pwsh
+        run: |
+          $vsPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+              -latest -property installationPath
+          $vcvars = "$vsPath\VC\Auxiliary\Build\vcvars64.bat"
+          cmd /c "`"$vcvars`" && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              "$($Matches[1])=$($Matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            }
+          }
+
+      - name: Disable Windows Error Reporting dialogs
+        shell: pwsh
+        run: |
+          New-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting" -Force | Out-Null
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\Windows Error Reporting" -Name DontShowUI -Value 1 -Type DWord
+
+      - name: Install SDL3
+        uses: ./.github/actions/install-sdl
+
+      - name: Configure
+        run: cmake --preset asan-win32 -B build/asan-win32
+
+      - name: Build
+        run: cmake --build --preset asan-win32
+
+      - name: Test
+        run: ctest --preset asan-win32
