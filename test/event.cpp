@@ -19,6 +19,7 @@
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_version.h>
 
 // The event fields are copied from SDL unchanged, so exact comparison is the
 // intended check.
@@ -204,6 +205,35 @@ int main()
                 wheel->direction() == sdl::mouse_wheel_direction::flipped
             );
         }
+    }
+
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    {
+        sdl::event pushed = make(SDL_EVENT_PINCH_UPDATE);
+        pushed.sdl().pinch.windowID = 4;
+        pushed.sdl().pinch.scale = 1.25F;
+        auto const pinch = round_trip(pushed).get_if<sdl::pinch_update_event>();
+        EGGS_SDL_CHECK(pinch.has_value());
+        if (pinch) {
+            EGGS_SDL_CHECK(pinch->window_id() == sdl::window_id{4});
+            EGGS_SDL_CHECK(pinch->scale() == 1.25F);
+        }
+        EGGS_SDL_CHECK(round_trip(make(SDL_EVENT_PINCH_BEGIN))
+                           .holds_alternative<sdl::pinch_begin_event>());
+        EGGS_SDL_CHECK(
+            round_trip(make(SDL_EVENT_SCREEN_KEYBOARD_SHOWN))
+                .holds_alternative<sdl::screen_keyboard_shown_event>()
+        );
+    }
+#endif
+
+    {
+        sdl::event pushed = make(SDL_EVENT_DISPLAY_ADDED);
+        pushed.sdl().display.displayID = 7;
+        auto const added =
+            round_trip(pushed).get_if<sdl::display_added_event>();
+        EGGS_SDL_CHECK(added.has_value());
+        EGGS_SDL_CHECK(added && added->display() == sdl::display_id{7});
     }
 
     // -- Window ----------------------------------------------------------------

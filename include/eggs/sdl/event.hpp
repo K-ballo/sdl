@@ -33,6 +33,7 @@
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_version.h>
 
 namespace eggs::sdl {
 
@@ -171,6 +172,27 @@ class common_event
 
   private:
     std::chrono::nanoseconds timestamp_{};
+};
+
+template <event_type T>
+class display_event : public common_event<T>
+{
+  public:
+    constexpr display_event() noexcept = default;
+
+    explicit display_event(SDL_Event const& e) noexcept
+        : common_event<T>(e),
+          display_(static_cast<display_id>(e.display.displayID))
+    {
+    }
+
+    [[nodiscard]] constexpr auto display() const noexcept -> display_id
+    {
+        return display_;
+    }
+
+  private:
+    display_id display_{};
 };
 
 template <event_type T>
@@ -540,6 +562,39 @@ class mouse_wheel_event : public common_event<T>
     float mouse_x_ = 0;
     float mouse_y_ = 0;
 };
+
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+template <event_type T>
+class pinch_event : public common_event<T>
+{
+  public:
+    constexpr pinch_event() noexcept = default;
+
+    explicit pinch_event(SDL_Event const& e) noexcept
+        : common_event<T>(e),
+          window_id_(static_cast<eggs::sdl::window_id>(e.pinch.windowID)),
+          scale_(e.pinch.scale)
+    {
+    }
+
+    [[nodiscard]] constexpr auto window_id() const noexcept
+        -> eggs::sdl::window_id
+    {
+        return window_id_;
+    }
+
+    // The scale change since the last pinch update, below 1 is zooming out
+    // and above 1 is zooming in.
+    [[nodiscard]] constexpr auto scale() const noexcept -> float
+    {
+        return scale_;
+    }
+
+  private:
+    eggs::sdl::window_id window_id_{};
+    float scale_ = 0;
+};
+#endif
 
 } // namespace detail
 

@@ -15,6 +15,7 @@
 #include "support.hpp"
 
 #include <SDL3/SDL_surface.h>
+#include <SDL3/SDL_version.h>
 
 namespace sdl = eggs::sdl;
 
@@ -123,6 +124,27 @@ int main()
 
     EGGS_SDL_CHECK(window.destroy_surface().has_value());
     EGGS_SDL_CHECK(!window.has_surface());
+
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    // -- Progress --------------------------------------------------------------
+
+    EGGS_SDL_CHECK(
+        window.set_progress_state(sdl::progress_state::normal).has_value()
+    );
+    auto const state = window.get_progress_state();
+    EGGS_SDL_CHECK(state.has_value());
+    EGGS_SDL_CHECK(state && *state == sdl::progress_state::normal);
+    EGGS_SDL_CHECK(window.set_progress_value(0.5F).has_value());
+    auto const value = window.progress_value();
+    EGGS_SDL_CHECK(value.has_value());
+    EGGS_SDL_CHECK(value && *value > 0.49F && *value < 0.51F);
+    EGGS_SDL_CHECK(
+        window.set_progress_state(sdl::progress_state::none).has_value()
+    );
+
+    // Only Emscripten acts on it, the other platforms ignore or reject it.
+    (void)window.set_fill_document(false);
+#endif
 
     // -- Ownership -------------------------------------------------------------
 

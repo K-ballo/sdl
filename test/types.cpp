@@ -18,6 +18,7 @@
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_version.h>
 #include <SDL3/SDL_video.h>
 
 namespace sdl = eggs::sdl;
@@ -94,6 +95,19 @@ static_assert(
 static_assert(
     static_cast<std::uint32_t>(sdl::scancode::escape) == SDL_SCANCODE_ESCAPE
 );
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+static_assert(
+    static_cast<std::uint64_t>(sdl::window_flags::fill_document) ==
+    SDL_WINDOW_FILL_DOCUMENT
+);
+static_assert(
+    static_cast<std::uint32_t>(sdl::scancode::front) == SDL_SCANCODE_FRONT
+);
+static_assert(
+    static_cast<std::int32_t>(sdl::progress_state::error) ==
+    SDL_PROGRESS_STATE_ERROR
+);
+#endif
 static_assert(static_cast<std::uint32_t>(sdl::keycode::escape) == SDLK_ESCAPE);
 static_assert(
     static_cast<std::uint16_t>(sdl::key_modifiers::ctrl) == SDL_KMOD_CTRL

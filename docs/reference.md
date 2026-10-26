@@ -25,8 +25,16 @@ http://www.boost.org/LICENSE_1_0.txt)
 Headers under `eggs/sdl/detail/` are implementation details, except for
 the `EGGS_SDL_EVENT_TYPES` table.
 
-The SDL version required is 3.2.0. Every function that returns
-`std::expected<T, error>` is `[[nodiscard]]`.
+The SDL version required is 3.2.0, and the latest release the library is
+tested against is 3.4.18. What a newer release adds is available when
+compiled against it, and is absent when compiled against an older one:
+`pinch_begin_event`, `pinch_update_event`, `pinch_end_event`,
+`screen_keyboard_shown_event`, `screen_keyboard_hidden_event`,
+`display_usable_bounds_changed_event`, `scancode::front`,
+`window_flags::fill_document`, `progress_state` and the window members that
+use it need SDL 3.4.0. The SDL library loaded at run time must be at least
+as new as the one compiled against. Every function
+that returns `std::expected<T, error>` is `[[nodiscard]]`.
 
 ---
 
@@ -128,6 +136,13 @@ class window
     auto update_surface() const -> std::expected<void, error>;
     auto update_surface(std::span<rect const> rects) const -> std::expected<void, error>;
     auto destroy_surface() const -> std::expected<void, error>;
+
+    // SDL 3.4.0 and later
+    auto set_fill_document(bool fill) const -> std::expected<void, error>;
+    auto set_progress_state(progress_state state) const -> std::expected<void, error>;
+    auto get_progress_state() const -> std::expected<progress_state, error>;
+    auto set_progress_value(float value) const -> std::expected<void, error>;
+    auto progress_value() const -> std::expected<float, error>;
 };
 
 struct window_deleter;
@@ -146,6 +161,13 @@ member functions assert that the handle is not null in debug builds.
   invalidated by `destroy_surface`, by destroying the window, and by a
   resize or a change of the pixel size of the window. It fails for
   windows created with a 3D API flag.
+- **`set_fill_document`**, **`set_progress_state`**, **`get_progress_state`**,
+  **`set_progress_value`** and **`progress_value`** need SDL 3.4.0.
+  `progress_state` is `none`, `indeterminate`, `normal`, `paused` or
+  `error`, with SDL's values. SDL reports a failed query with
+  `SDL_PROGRESS_STATE_INVALID` or a value of -1, which are errors here.
+  SDL clamps a progress value outside 0 to 1. `set_fill_document` only
+  acts on Emscripten.
 
 ---
 
@@ -214,6 +236,8 @@ trivially copyable value that does not alias the `SDL_Event`.
 | | `window_moved_event` | `window_id()`, `position()` as `point` |
 | | `window_resized_event`, `window_pixel_size_changed_event` | `window_id()`, `size()` as `extent` |
 | | `window_display_changed_event` | `window_id()`, `display()` as `display_id` |
+| display | `display_added_event`, `display_removed_event`, `display_moved_event`, `display_orientation_event`, `display_desktop_mode_changed_event`, `display_current_mode_changed_event`, `display_content_scale_changed_event`, `display_usable_bounds_changed_event` | `display()` as `display_id` |
+| pinch (SDL 3.4) | `pinch_begin_event`, `pinch_update_event`, `pinch_end_event` | `window_id()`, `scale()` |
 | keyboard | `key_down_event`, `key_up_event` | `window_id()`, `which()`, `scancode()`, `keycode()`, `modifiers()`, `raw()`, `down()`, `repeat()` |
 | | `keyboard_added_event`, `keyboard_removed_event` | `which()` as `keyboard_id` |
 | mouse | `mouse_motion_event` | `window_id()`, `which()`, `buttons()`, `x()`, `y()`, `x_relative()`, `y_relative()` |

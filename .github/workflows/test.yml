@@ -43,6 +43,10 @@ jobs:
           - { os: windows-2025-vs2026, compiler: clang-cl-20, preset: dev-clang-cl }
           # -- macOS / Apple Clang ----------------------------------------------
           - { os: macos-15, compiler: apple-clang-16, preset: dev-clang }
+          # -- Latest SDL release (the rows above build the minimum, 3.2.0) -----
+          - { os: ubuntu-24.04, compiler: gcc-16-sdl-3.4, preset: dev-gcc, cc: gcc-16, cxx: g++-16, packages: "gcc-16 g++-16", ppa: ubuntu-toolchain-r, sdl_ref: release-3.4.18 }
+          - { os: ubuntu-24.04, compiler: clang-22-sdl-3.4, preset: dev-clang, cc: clang-22, cxx: clang++-22, packages: "clang-22 clang-tools-22 g++-16", llvm_ver: "22", ppa: ubuntu-toolchain-r, gcc_toolchain: "16", sdl_ref: release-3.4.18 }
+          - { os: windows-2025-vs2026, compiler: msvc-2026-sdl-3.4, preset: dev-msvc, sdl_ref: release-3.4.18 }
 
     steps:
       - uses: actions/checkout@v5
@@ -75,6 +79,8 @@ jobs:
       # runners that still have the stock one.
       - name: Install SDL3
         uses: ./.github/actions/install-sdl
+        with:
+          ref: ${{ matrix.sdl_ref || 'release-3.2.0' }}
 
       # -- Linux: add optional extra APT sources before install -------------
       - name: Add ubuntu-toolchain-r PPA

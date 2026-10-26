@@ -12,7 +12,7 @@ http://www.boost.org/LICENSE_1_0.txt)
 
 ## SDL3
 
-Eggs.SDL needs SDL 3.2.0 or later, found with
+Eggs.SDL needs SDL 3.2.0 or later and is tested up to 3.4.18, found with
 `find_package(SDL3 3.2.0 CONFIG REQUIRED)`. If SDL3 is not in a default
 location, point CMake at its install prefix, through `CMAKE_PREFIX_PATH`
 or the `SDL3_ROOT` environment variable:

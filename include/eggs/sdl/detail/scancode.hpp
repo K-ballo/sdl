@@ -13,6 +13,7 @@
 #include <cstdint>
 
 #include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_version.h>
 
 namespace eggs::sdl {
 
@@ -266,6 +267,9 @@ enum class scancode : std::uint32_t
     call = SDL_SCANCODE_CALL,
     endcall = SDL_SCANCODE_ENDCALL,
     reserved = SDL_SCANCODE_RESERVED,
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    front = SDL_SCANCODE_FRONT,
+#endif
 };
 
 } // namespace eggs::sdl

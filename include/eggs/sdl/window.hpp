@@ -23,6 +23,7 @@
 
 #include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_surface.h>
+#include <SDL3/SDL_version.h>
 #include <SDL3/SDL_video.h>
 
 namespace eggs::sdl {
@@ -55,6 +56,9 @@ enum class window_flags : std::uint64_t
     metal = SDL_WINDOW_METAL,
     transparent = SDL_WINDOW_TRANSPARENT,
     not_focusable = SDL_WINDOW_NOT_FOCUSABLE,
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    fill_document = SDL_WINDOW_FILL_DOCUMENT,
+#endif
 };
 
 template <>
@@ -64,6 +68,18 @@ inline constexpr bool enable_bitmask_operators<window_flags> = true;
 enum class window_id : std::uint32_t
 {
 };
+
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+// SDL_PROGRESS_STATE_INVALID is how SDL reports a failure, it is an error here.
+enum class progress_state : std::int32_t
+{
+    none = SDL_PROGRESS_STATE_NONE,
+    indeterminate = SDL_PROGRESS_STATE_INDETERMINATE,
+    normal = SDL_PROGRESS_STATE_NORMAL,
+    paused = SDL_PROGRESS_STATE_PAUSED,
+    error = SDL_PROGRESS_STATE_ERROR,
+};
+#endif
 
 class window;
 
@@ -148,6 +164,23 @@ class window
 
     // Invalidates any surface previously returned by get_surface.
     [[nodiscard]] auto destroy_surface() const -> std::expected<void, error>;
+
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+    // Emscripten only, see window_flags::fill_document. Requires SDL 3.4.0.
+    [[nodiscard]] auto set_fill_document(bool fill) const
+        -> std::expected<void, error>;
+
+    // The progress shown on the taskbar or dock icon, where the platform has
+    // one. The state getter is get_-prefixed as it would equal its type. SDL
+    // clamps a value outside 0 to 1. Requires SDL 3.4.0.
+    [[nodiscard]] auto set_progress_state(progress_state state) const
+        -> std::expected<void, error>;
+    [[nodiscard]] auto get_progress_state() const
+        -> std::expected<progress_state, error>;
+    [[nodiscard]] auto set_progress_value(float value) const
+        -> std::expected<void, error>;
+    [[nodiscard]] auto progress_value() const -> std::expected<float, error>;
+#endif
 
   private:
     SDL_Window* handle_ = nullptr;
@@ -282,5 +315,48 @@ inline auto window::destroy_surface() const -> std::expected<void, error>
     assert(handle_);
     return detail::check(SDL_DestroyWindowSurface(handle_));
 }
+
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+inline auto window::set_fill_document(bool fill) const
+    -> std::expected<void, error>
+{
+    assert(handle_);
+    return detail::check(SDL_SetWindowFillDocument(handle_, fill));
+}
+
+inline auto window::set_progress_state(progress_state state) const
+    -> std::expected<void, error>
+{
+    assert(handle_);
+    return detail::check(SDL_SetWindowProgressState(
+        handle_, static_cast<SDL_ProgressState>(state)
+    ));
+}
+
+inline auto window::get_progress_state() const
+    -> std::expected<progress_state, error>
+{
+    assert(handle_);
+    SDL_ProgressState const state = SDL_GetWindowProgressState(handle_);
+    if (state == SDL_PROGRESS_STATE_INVALID)
+        return std::unexpected(error::current());
+    return static_cast<progress_state>(state);
+}
+
+inline auto window::set_progress_value(float value) const
+    -> std::expected<void, error>
+{
+    assert(handle_);
+    return detail::check(SDL_SetWindowProgressValue(handle_, value));
+}
+
+inline auto window::progress_value() const -> std::expected<float, error>
+{
+    assert(handle_);
+    float const value = SDL_GetWindowProgressValue(handle_);
+    if (value < 0) return std::unexpected(error::current());
+    return value;
+}
+#endif
 
 } // namespace eggs::sdl

@@ -6,7 +6,7 @@ dependencies.
 
 ## Requirements
 
-- SDL 3.2.0 or later, found with `find_package(SDL3 CONFIG)`
+- SDL 3.2.0 or later (tested up to 3.4.18), found with `find_package(SDL3 CONFIG)`
 - CMake 4.0+ to build from source; CMake 3.21+ to consume an installed package via `find_package`
 - A C++23 compiler with `std::expected`; CI covers GCC 15-16, Clang 21-22 (libstdc++ and libc++), MSVC 2022 and 2026, clang-cl and Apple Clang
 

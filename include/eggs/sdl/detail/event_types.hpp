@@ -8,10 +8,14 @@
 
 #pragma once
 
+#include <SDL3/SDL_version.h>
+
 // One row per SDL event type: X(name, SDL value, family). The alternative is
 // named <name>_event and is an instance of detail::<family>_event, which gives
-// it its accessors. Adding an SDL event type is adding a row.
-#define EGGS_SDL_EVENT_TYPES(X)                                               \
+// it its accessors. Adding an SDL event type is adding a row. The rows are
+// split by the SDL release that introduced them, those of a newer release
+// than the one compiled against are left out.
+#define EGGS_SDL_EVENT_TYPES_3_2(X)                                           \
     X(quit, SDL_EVENT_QUIT, common)                                           \
     X(terminating, SDL_EVENT_TERMINATING, common)                             \
     X(low_memory, SDL_EVENT_LOW_MEMORY, common)                               \
@@ -21,16 +25,16 @@
     X(did_enter_foreground, SDL_EVENT_DID_ENTER_FOREGROUND, common)           \
     X(locale_changed, SDL_EVENT_LOCALE_CHANGED, common)                       \
     X(system_theme_changed, SDL_EVENT_SYSTEM_THEME_CHANGED, common)           \
-    X(display_orientation, SDL_EVENT_DISPLAY_ORIENTATION, common)             \
-    X(display_added, SDL_EVENT_DISPLAY_ADDED, common)                         \
-    X(display_removed, SDL_EVENT_DISPLAY_REMOVED, common)                     \
-    X(display_moved, SDL_EVENT_DISPLAY_MOVED, common)                         \
+    X(display_orientation, SDL_EVENT_DISPLAY_ORIENTATION, display)            \
+    X(display_added, SDL_EVENT_DISPLAY_ADDED, display)                        \
+    X(display_removed, SDL_EVENT_DISPLAY_REMOVED, display)                    \
+    X(display_moved, SDL_EVENT_DISPLAY_MOVED, display)                        \
     X(display_desktop_mode_changed, SDL_EVENT_DISPLAY_DESKTOP_MODE_CHANGED,   \
-      common)                                                                 \
+      display)                                                                \
     X(display_current_mode_changed, SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED,   \
-      common)                                                                 \
+      display)                                                                \
     X(display_content_scale_changed, SDL_EVENT_DISPLAY_CONTENT_SCALE_CHANGED, \
-      common)                                                                 \
+      display)                                                                \
     X(window_shown, SDL_EVENT_WINDOW_SHOWN, window)                           \
     X(window_hidden, SDL_EVENT_WINDOW_HIDDEN, window)                         \
     X(window_exposed, SDL_EVENT_WINDOW_EXPOSED, window)                       \
@@ -125,3 +129,19 @@
     X(render_targets_reset, SDL_EVENT_RENDER_TARGETS_RESET, common)           \
     X(render_device_reset, SDL_EVENT_RENDER_DEVICE_RESET, common)             \
     X(render_device_lost, SDL_EVENT_RENDER_DEVICE_LOST, common)
+
+#define EGGS_SDL_EVENT_TYPES_3_4(X)                                           \
+    X(display_usable_bounds_changed, SDL_EVENT_DISPLAY_USABLE_BOUNDS_CHANGED, \
+      display)                                                                \
+    X(screen_keyboard_shown, SDL_EVENT_SCREEN_KEYBOARD_SHOWN, common)         \
+    X(screen_keyboard_hidden, SDL_EVENT_SCREEN_KEYBOARD_HIDDEN, common)       \
+    X(pinch_begin, SDL_EVENT_PINCH_BEGIN, pinch)                              \
+    X(pinch_update, SDL_EVENT_PINCH_UPDATE, pinch)                            \
+    X(pinch_end, SDL_EVENT_PINCH_END, pinch)
+
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+#    define EGGS_SDL_EVENT_TYPES(X) \
+        EGGS_SDL_EVENT_TYPES_3_2(X) EGGS_SDL_EVENT_TYPES_3_4(X)
+#else
+#    define EGGS_SDL_EVENT_TYPES(X) EGGS_SDL_EVENT_TYPES_3_2(X)
+#endif
