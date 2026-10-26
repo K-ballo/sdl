@@ -50,11 +50,14 @@ int main()
 ```
 
 `example/window_demo.cpp` opens a window and paints its surface from the pointer position.
+`example/surface_demo.cpp` blits a moving sprite, drawn or loaded from a BMP file, onto the window surface.
 
-## Stage 1
+## What it provides
 
-Error handling, init and quit, windows, the window surface and the full set of
-SDL3 events. See [docs](docs/index.md) for the design and the reference.
+Error handling, init and quit, windows, the full set of SDL3 events, surfaces
+with their pixel formats, blending and raw pixel access, float geometry and
+color value types, and time. See [docs](docs/index.md) for the design and the
+reference.
 
 ## License
 

@@ -18,12 +18,17 @@ http://www.boost.org/LICENSE_1_0.txt)
 | `<eggs/sdl/error.hpp>` | `error` |
 | `<eggs/sdl/init.hpp>` | `init_flags`, `subsystems`, `unique_subsystems`, `init`, `quit`, `was_init`, `set_app_metadata`, `set_app_metadata_property` |
 | `<eggs/sdl/window.hpp>` | `window_flags`, `window_id`, `window`, `unique_window`, `extent`, `point`, `rect` |
-| `<eggs/sdl/surface.hpp>` | `rgb`, `surface` |
+| `<eggs/sdl/geometry.hpp>` | `fpoint`, `fextent`, `frect`, and `extent`, `point`, `rect` |
+| `<eggs/sdl/color.hpp>` | `rgb`, `rgba`, `fcolor` |
+| `<eggs/sdl/pixel_format.hpp>` | `pixel_format`, `name`, `bits_per_pixel`, `bytes_per_pixel`, `has_alpha` |
+| `<eggs/sdl/blend_mode.hpp>` | `blend_mode` |
+| `<eggs/sdl/surface.hpp>` | `scale_mode`, `flip_mode`, `surface`, `unique_surface`, `surface_lock` |
+| `<eggs/sdl/time.hpp>` | `clock`, `performance_counter`, `performance_frequency`, `delay`, `delay_precise` |
 | `<eggs/sdl/keyboard.hpp>` | `scancode`, `keycode`, `key_modifiers`, `name` |
 | `<eggs/sdl/event.hpp>` | `event_type`, the event alternatives, `event`, the queue functions, `event_watch`, `event_filter` |
 
 Headers under `eggs/sdl/detail/` are implementation details, except for
-the `EGGS_SDL_EVENT_TYPES` table.
+the `EGGS_SDL_EVENT_TYPES` and `EGGS_SDL_PIXEL_FORMATS` tables.
 
 The SDL version required is 3.2.0, and the latest release the library is
 tested against is 3.4.18. What a newer release adds is available when
@@ -31,8 +36,9 @@ compiled against it, and is absent when compiled against an older one:
 `pinch_begin_event`, `pinch_update_event`, `pinch_end_event`,
 `screen_keyboard_shown_event`, `screen_keyboard_hidden_event`,
 `display_usable_bounds_changed_event`, `scancode::front`,
-`window_flags::fill_document`, `progress_state` and the window members that
-use it need SDL 3.4.0. The SDL library loaded at run time must be at least
+`window_flags::fill_document`, `progress_state`, the window members that
+use it, `pixel_format::mjpg`, `scale_mode::pixelart` and
+`flip_mode::horizontal_and_vertical` need SDL 3.4.0. The SDL library loaded at run time must be at least
 as new as the one compiled against. Every function
 that returns `std::expected<T, error>` is `[[nodiscard]]`.
 
@@ -97,6 +103,61 @@ struct point  { int x; int y; };
 struct rect   { int x; int y; int width; int height; };
 struct rgb    { std::uint8_t r; std::uint8_t g; std::uint8_t b; };
 ```
+
+The `f` variants are for the float geometry of SDL:
+
+```cpp
+struct fpoint  { float x; float y; };
+struct fextent { float width; float height; };
+struct frect   { float x; float y; float width; float height; };
+```
+
+`fpoint` and `frect` have the layout of `SDL_FPoint` and `SDL_FRect`, which
+is checked at compile time, so arrays of them can be handed to SDL as they
+are.
+
+---
+
+## Color
+
+```cpp
+struct rgb    { std::uint8_t r; std::uint8_t g; std::uint8_t b; operator rgba() const noexcept; };
+struct rgba   { std::uint8_t r; std::uint8_t g; std::uint8_t b; std::uint8_t a = 255; };
+struct fcolor { float r; float g; float b; float a = 1.0F; };
+```
+
+Plain aggregates. `rgba` and `fcolor` have the layout of `SDL_Color` and
+`SDL_FColor`. An `rgb` converts to an opaque `rgba` implicitly, through a
+conversion function on `rgb`, so that `rgba` stays an aggregate: it can be
+initialized with braces and with designated initializers, and `a` may be
+left out.
+
+---
+
+## Pixel format
+
+```cpp
+enum class pixel_format : std::uint32_t { /* every SDL3 pixel format */ };
+auto name(pixel_format format) noexcept -> std::string_view;
+constexpr auto bits_per_pixel(pixel_format format) noexcept -> int;
+constexpr auto bytes_per_pixel(pixel_format format) noexcept -> int;
+constexpr auto has_alpha(pixel_format format) noexcept -> bool;
+
+enum class blend_mode : std::uint32_t { none, blend, blend_premultiplied, add, add_premultiplied, mod, mul };
+```
+
+The enumerators are SDL's formats in snake case without the prefix, with
+SDL's values, including the endian-dependent aliases such as `rgba32`
+(`rgba8888` or `abgr8888`, so that its bytes are in the order r, g, b, a in
+memory), and `unknown`. `mjpg` needs SDL 3.4.0. The table they are generated
+from is `EGGS_SDL_PIXEL_FORMATS(X)`, in the same way as the events.
+
+`name` is SDL-owned and static, `"SDL_PIXELFORMAT_UNKNOWN"` for a value that
+is not a pixel format. The FourCC formats, the YUV ones, have 0 bits per
+pixel and, as SDL defines it, a best effort 1 or 2 bytes per pixel.
+
+`blend_mode` can hold other values than its enumerators, as SDL can compose
+custom blend modes, and a value read back from SDL may be one.
 
 ---
 
@@ -174,6 +235,11 @@ member functions assert that the handle is not null in debug builds.
 ## Surface
 
 ```cpp
+enum class scale_mode : std::int32_t { nearest, linear /* , pixelart */ };
+enum class flip_mode  : std::int32_t { none, horizontal, vertical /* , horizontal_and_vertical */ };
+
+using unique_surface = std::unique_ptr<surface, surface_deleter>;
+
 class surface
 {
   public:
@@ -181,18 +247,129 @@ class surface
     constexpr surface(std::nullptr_t) noexcept;
     explicit constexpr surface(SDL_Surface* handle) noexcept;
 
+    static auto create(extent size, pixel_format format) -> std::expected<unique_surface, error>;
+    static auto from_pixels(extent size, pixel_format format, std::span<std::byte> pixels, int pitch)
+        -> std::expected<unique_surface, error>;
+    static auto load_bmp(char const* path) -> std::expected<unique_surface, error>;
+
     constexpr auto handle() const noexcept -> SDL_Surface*;
     constexpr explicit operator bool() const noexcept;
 
     auto size() const noexcept -> extent;
-    auto fill(rgb color) const -> std::expected<void, error>;
-    auto fill(rect area, rgb color) const -> std::expected<void, error>;
+    auto format() const noexcept -> pixel_format;
+    auto pitch() const noexcept -> int;
+
+    auto duplicate() const -> std::expected<unique_surface, error>;
+    auto convert(pixel_format format) const -> std::expected<unique_surface, error>;
+    auto scale(extent size, scale_mode mode) const -> std::expected<unique_surface, error>;
+
+    auto flip(flip_mode mode) const -> std::expected<void, error>;
+    auto premultiply_alpha(bool linear = false) const -> std::expected<void, error>;
+
+    auto clear(fcolor color) const -> std::expected<void, error>;
+    auto fill(rgba color) const -> std::expected<void, error>;
+    auto fill(rect area, rgba color) const -> std::expected<void, error>;
+    auto fill(std::span<rect const> areas, rgba color) const -> std::expected<void, error>;
+    auto blit(surface destination, point at = {}, std::optional<rect> source = {}) const
+        -> std::expected<void, error>;
+    auto blit_scaled(surface destination, rect area, scale_mode mode, std::optional<rect> source = {}) const
+        -> std::expected<void, error>;
+
+    auto set_color_key(std::optional<rgba> key) const -> std::expected<void, error>;
+    auto color_key() const noexcept -> std::optional<rgba>;
+    auto set_color_mod(rgb color) const -> std::expected<void, error>;
+    auto color_mod() const -> std::expected<rgb, error>;
+    auto set_alpha_mod(std::uint8_t alpha) const -> std::expected<void, error>;
+    auto alpha_mod() const -> std::expected<std::uint8_t, error>;
+    auto set_blend_mode(blend_mode mode) const -> std::expected<void, error>;
+    auto get_blend_mode() const -> std::expected<blend_mode, error>;
+    auto set_clip_rect(std::optional<rect> area) const -> bool;
+    auto clip_rect() const -> std::expected<rect, error>;
+
+    auto read_pixel(point at) const -> std::expected<rgba, error>;
+    auto write_pixel(point at, rgba color) const -> std::expected<void, error>;
+
+    auto lock() const -> std::expected<surface_lock, error>;
+    auto save_bmp(char const* path) const -> std::expected<void, error>;
+};
+
+class surface_lock   // move-only, unlocks when destroyed
+{
+  public:
+    auto pixels() const noexcept -> std::span<std::byte>;
+    auto pitch() const noexcept -> int;
 };
 ```
 
-In stage 1 a surface is only ever the window surface, borrowed from its
-window (see `window::get_surface` for its validity). There is no
-`unique_surface` yet.
+A `surface` is either one the caller owns, through a `unique_surface`, or
+a borrowed one, such as the window surface (see `window::get_surface` for
+its validity). Every member works on both. Do not put a borrowed surface in
+a `unique_surface`. `scale_mode::pixelart` and
+`flip_mode::horizontal_and_vertical` need SDL 3.4.0.
+
+- **`create`** zero fills the surface. A negative size fails, a size of
+  zero does not.
+- **`from_pixels`** does not copy: the memory must outlive the surface, and
+  must not be accessed except through a `surface_lock` while the surface
+  uses it. It fails when the span is smaller than the pixels, which for the
+  FourCC formats is only checked for their first plane.
+- **`duplicate`, `convert` and `scale`** return new surfaces, and never
+  modify the source.
+- **`flip` and `premultiply_alpha`** modify the surface in place.
+- **`clear`** sets every pixel. **`fill`** sets the pixels of the area, or
+  of the whole surface, to the color as the format represents it, alpha
+  included. Only `fill` is clipped by the clip rect.
+- **`blit`** copies the surface onto the destination, with the blend mode,
+  color and alpha modulation and color key of the source, and the clip rect
+  of the destination. The coordinates are in destination pixels. Only the
+  position of the destination is used and the size is that of the source,
+  or of the source rect. **`blit_scaled`** stretches the source to the area.
+  Surfaces of different pixel formats can be blitted, SDL converts as it
+  goes. Converting a surface once to the format of the destination is faster
+  when it is blitted repeatedly.
+- **`color_key`** returns the key as the format of the surface holds it,
+  which is the color that was set only as far as the format can represent
+  it, and is empty when there is no key.
+- **`set_clip_rect`** returns whether the area intersects the surface. False
+  is not a failure: SDL then clips every blit completely, and does not
+  report an error, so it is a `bool` and not an `expected`.
+- **`read_pixel` and `write_pixel`** are slow, for tools and tests.
+- **`lock`**: pixel memory may be accessed only while the `surface_lock` is
+  alive. Its span, of the pitch times the height bytes, is invalid once the
+  lock or the surface is gone.
+- **`load_bmp` and `save_bmp`** are the only file formats.
+
+Surfaces may be created and loaded on any thread. A surface is used by one
+thread at a time, and `blit` and `blit_scaled` need exclusive use of both
+surfaces. Different surfaces may be used on different threads.
+
+---
+
+## Time
+
+```cpp
+struct clock
+{
+    using duration = std::chrono::nanoseconds;
+    using rep = duration::rep;
+    using period = duration::period;
+    using time_point = std::chrono::time_point<clock>;
+    static constexpr bool is_steady = true;
+    static auto now() noexcept -> time_point;   // time since SDL was initialized
+};
+
+auto performance_counter() noexcept -> std::uint64_t;
+auto performance_frequency() noexcept -> std::uint64_t;
+void delay(std::chrono::nanoseconds duration) noexcept;
+void delay_precise(std::chrono::nanoseconds duration) noexcept;
+```
+
+`clock` is a steady clock that satisfies `std::chrono::is_clock`. `rep` and
+`period` are those of `duration`, which are `std::int64_t` and `std::nano`
+wherever that is what `std::chrono::nanoseconds` is made of. A duration that
+is not positive does not wait. `delay_precise` spends the final stretch
+spinning, to be more accurate and at a higher cost of processor time. These
+functions may be called from any thread.
 
 ---
 

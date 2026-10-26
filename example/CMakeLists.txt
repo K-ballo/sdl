@@ -9,7 +9,8 @@
 include(EggsSdlRuntimeDlls)
 
 # The demos need a window and wait for the user, so they are built but not
-# registered as tests; test/window_demo.cpp drives window_demo.hpp.
+# registered as tests; test/window_demo.cpp drives window_demo.hpp, and
+# test/surface_demo.cpp drives surface_demo.hpp.
 function(add_example name)
     add_executable(eggs.sdl.example.${name} ${name}.cpp)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${name}.hpp)
@@ -27,6 +28,7 @@ function(add_example name)
 endfunction()
 
 add_example(window_demo Eggs::SDL)
+add_example(surface_demo Eggs::SDL)
 
 # Consumer smoke test, runs without a display.
 add_executable(eggs.sdl.example.main main.cpp)

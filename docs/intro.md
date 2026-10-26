@@ -30,14 +30,19 @@ types:
 - events are a closed set of small value types that can be matched with
   `visit`.
 
-## What stage 1 provides
+## What it provides
 
 - **`<eggs/sdl/error.hpp>`** -- `error`.
 - **`<eggs/sdl/init.hpp>`** -- `init`, `quit`, `was_init`, `unique_subsystems`
   and the application metadata functions.
 - **`<eggs/sdl/window.hpp>`** -- `window`, `unique_window` and the window
   surface functions.
-- **`<eggs/sdl/surface.hpp>`** -- the borrowed window `surface`.
+- **`<eggs/sdl/surface.hpp>`** -- `surface`, `unique_surface` and
+  `surface_lock`: surfaces that are created, loaded or borrowed from a
+  window, with blits, fills, conversions and raw pixel access.
+- **`<eggs/sdl/geometry.hpp>`, `color.hpp`, `pixel_format.hpp`,
+  `blend_mode.hpp`** -- the value types and enumerations of the above.
+- **`<eggs/sdl/time.hpp>`** -- `clock`, `delay` and the performance counter.
 - **`<eggs/sdl/keyboard.hpp>`** -- `scancode`, `keycode`, `key_modifiers`.
 - **`<eggs/sdl/event.hpp>`** -- the full set of SDL3 events, the event
   queue functions, watches and filters.

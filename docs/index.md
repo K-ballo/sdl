@@ -10,7 +10,7 @@ http://www.boost.org/LICENSE_1_0.txt)
 
 # Index
 
-- [Introduction](intro.md) -- What the library is and what stage 1 covers
+- [Introduction](intro.md) -- What the library is and what it covers
 - [Design](design.md) -- Design rationale and key decisions
 - [Usage](usage.md) -- How to use the library with examples
 - [CMake](cmake.md) -- Build system integration, SDL3, targets, and variables

@@ -14,10 +14,12 @@
 
 #include "support.hpp"
 
+#include <SDL3/SDL_blendmode.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_surface.h>
 #include <SDL3/SDL_version.h>
 #include <SDL3/SDL_video.h>
 
@@ -44,6 +46,90 @@ static_assert(std::is_nothrow_move_constructible_v<sdl::event_watch>);
 static_assert(std::is_nothrow_move_constructible_v<sdl::event_filter>);
 static_assert(!std::is_copy_constructible_v<sdl::event_watch>);
 static_assert(!std::is_copy_constructible_v<sdl::event_filter>);
+
+// -- Surfaces, pixel formats, values ---------------------------------------
+
+static_assert(std::is_trivially_copyable_v<sdl::surface>);
+static_assert(sizeof(sdl::unique_surface) == sizeof(void*));
+static_assert(std::is_same_v<sdl::surface_deleter::pointer, sdl::surface>);
+static_assert(!std::is_copy_constructible_v<sdl::surface_lock>);
+static_assert(std::is_nothrow_move_constructible_v<sdl::surface_lock>);
+static_assert(std::is_nothrow_move_assignable_v<sdl::surface_lock>);
+
+static_assert(std::is_aggregate_v<sdl::rgb>);
+static_assert(std::is_aggregate_v<sdl::rgba>);
+static_assert(std::is_aggregate_v<sdl::fpoint>);
+static_assert(std::is_aggregate_v<sdl::fextent>);
+static_assert(std::is_aggregate_v<sdl::frect>);
+static_assert(std::is_aggregate_v<sdl::fcolor>);
+static_assert(std::is_convertible_v<sdl::rgb, sdl::rgba>);
+static_assert(!std::is_convertible_v<sdl::rgba, sdl::rgb>);
+static_assert(sdl::rgba{.r = 1, .g = 2, .b = 3}.a == 255);
+static_assert(sdl::rgba(sdl::rgb{.r = 1, .g = 2, .b = 3}).a == 255);
+static_assert(sdl::fcolor{.r = 1.0F, .g = 1.0F, .b = 1.0F}.a == 1.0F);
+
+#define EGGS_SDL_CHECK_PIXEL_FORMAT(name, value)                       \
+    static_assert(                                                     \
+        static_cast<std::uint32_t>(sdl::pixel_format::name) == (value) \
+    );
+EGGS_SDL_PIXEL_FORMATS(EGGS_SDL_CHECK_PIXEL_FORMAT)
+#undef EGGS_SDL_CHECK_PIXEL_FORMAT
+
+static_assert(sdl::bits_per_pixel(sdl::pixel_format::rgba32) == 32);
+static_assert(sdl::bytes_per_pixel(sdl::pixel_format::rgb565) == 2);
+static_assert(sdl::bytes_per_pixel(sdl::pixel_format::rgb24) == 3);
+static_assert(sdl::has_alpha(sdl::pixel_format::argb8888));
+static_assert(!sdl::has_alpha(sdl::pixel_format::xrgb8888));
+static_assert(!sdl::has_alpha(sdl::pixel_format::unknown));
+static_assert(noexcept(sdl::name(sdl::pixel_format::rgba32)));
+
+static_assert(
+    static_cast<std::uint32_t>(sdl::blend_mode::none) == SDL_BLENDMODE_NONE
+);
+static_assert(
+    static_cast<std::uint32_t>(sdl::blend_mode::blend) == SDL_BLENDMODE_BLEND
+);
+static_assert(
+    static_cast<std::uint32_t>(sdl::blend_mode::blend_premultiplied) ==
+    SDL_BLENDMODE_BLEND_PREMULTIPLIED
+);
+static_assert(
+    static_cast<std::uint32_t>(sdl::blend_mode::add) == SDL_BLENDMODE_ADD
+);
+static_assert(
+    static_cast<std::uint32_t>(sdl::blend_mode::add_premultiplied) ==
+    SDL_BLENDMODE_ADD_PREMULTIPLIED
+);
+static_assert(
+    static_cast<std::uint32_t>(sdl::blend_mode::mod) == SDL_BLENDMODE_MOD
+);
+static_assert(
+    static_cast<std::uint32_t>(sdl::blend_mode::mul) == SDL_BLENDMODE_MUL
+);
+
+static_assert(
+    static_cast<std::int32_t>(sdl::scale_mode::nearest) == SDL_SCALEMODE_NEAREST
+);
+static_assert(
+    static_cast<std::int32_t>(sdl::scale_mode::linear) == SDL_SCALEMODE_LINEAR
+);
+static_assert(static_cast<std::int32_t>(sdl::flip_mode::none) == SDL_FLIP_NONE);
+static_assert(
+    static_cast<std::int32_t>(sdl::flip_mode::horizontal) == SDL_FLIP_HORIZONTAL
+);
+static_assert(
+    static_cast<std::int32_t>(sdl::flip_mode::vertical) == SDL_FLIP_VERTICAL
+);
+#if SDL_VERSION_ATLEAST(3, 4, 0)
+static_assert(
+    static_cast<std::int32_t>(sdl::scale_mode::pixelart) ==
+    SDL_SCALEMODE_PIXELART
+);
+static_assert(
+    static_cast<std::int32_t>(sdl::flip_mode::horizontal_and_vertical) ==
+    SDL_FLIP_HORIZONTAL_AND_VERTICAL
+);
+#endif
 
 // -- Strong ids --------------------------------------------------------------
 

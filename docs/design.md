@@ -27,7 +27,7 @@ Every SDL object type `T` comes as two types:
   copyable, pointer-sized wrapper of the SDL pointer, that is null when
   default constructed. It owns nothing, so functions that merely use an
   object take it by value. `handle()` returns the SDL pointer.
-- `unique_T` (`unique_window`, `unique_subsystems`) is a
+- `unique_T` (`unique_window`, `unique_surface`, `unique_subsystems`) is a
   `std::unique_ptr<T, T_deleter>` whose deleter declares `pointer` to be
   the handle. `get()` yields the handle and `->` forwards to its member
   functions.
@@ -37,7 +37,7 @@ never return an empty owner. Because owners are plain `std::unique_ptr`,
 there is nothing to learn about their moves, resets or releases.
 
 `native_handle()` is reserved for platform objects (`HWND`,
-`NSWindow*`) and is not part of stage 1.
+`NSWindow*`) and is not provided yet.
 
 The handles have explicit constructors from the raw SDL pointers, to
 adopt objects that were created elsewhere. The handle member functions
@@ -46,7 +46,7 @@ precondition, not a runtime check.
 
 ## Lifetimes are documented, not enforced
 
-A `surface` borrowed from a window, a `window` obtained with
+A `surface` borrowed from a window, the span of a `surface_lock`, a `window` obtained with
 `window::from_id`, a `std::string_view` of an SDL-owned string: none of
 them keeps its source alive or notices when it dies. Each function
 documents what the lifetime of its result depends on. There is no shared

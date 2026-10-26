@@ -65,16 +65,22 @@ target_sources(
             BASE_DIRS include
             FILES
                 include/eggs/sdl.hpp
+                include/eggs/sdl/blend_mode.hpp
+                include/eggs/sdl/color.hpp
                 include/eggs/sdl/detail/bitmask.hpp
                 include/eggs/sdl/detail/event_types.hpp
                 include/eggs/sdl/detail/geometry.hpp
                 include/eggs/sdl/detail/keycode.hpp
+                include/eggs/sdl/detail/pixel_format_types.hpp
                 include/eggs/sdl/detail/scancode.hpp
                 include/eggs/sdl/error.hpp
                 include/eggs/sdl/event.hpp
+                include/eggs/sdl/geometry.hpp
                 include/eggs/sdl/init.hpp
                 include/eggs/sdl/keyboard.hpp
+                include/eggs/sdl/pixel_format.hpp
                 include/eggs/sdl/surface.hpp
+                include/eggs/sdl/time.hpp
                 include/eggs/sdl/window.hpp
 )
 set_target_properties(
