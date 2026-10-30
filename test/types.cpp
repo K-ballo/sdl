@@ -8,6 +8,7 @@
 
 #include <eggs/sdl.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -18,6 +19,7 @@
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_render.h>
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_surface.h>
 #include <SDL3/SDL_version.h>
@@ -53,6 +55,64 @@ static_assert(std::is_trivially_copyable_v<sdl::surface>);
 static_assert(sizeof(sdl::unique_surface) == sizeof(void*));
 static_assert(std::is_same_v<sdl::surface_deleter::pointer, sdl::surface>);
 static_assert(!std::is_copy_constructible_v<sdl::surface_lock>);
+static_assert(std::is_trivially_copyable_v<sdl::renderer>);
+static_assert(sizeof(sdl::renderer) == sizeof(void*));
+static_assert(std::is_trivially_copyable_v<sdl::texture>);
+static_assert(sizeof(sdl::texture) == sizeof(void*));
+static_assert(sizeof(sdl::unique_renderer) == sizeof(void*));
+static_assert(sizeof(sdl::unique_texture) == sizeof(void*));
+static_assert(std::is_same_v<sdl::renderer_deleter::pointer, sdl::renderer>);
+static_assert(std::is_same_v<sdl::texture_deleter::pointer, sdl::texture>);
+static_assert(!std::is_copy_constructible_v<sdl::texture_lock>);
+static_assert(std::is_nothrow_move_constructible_v<sdl::texture_lock>);
+static_assert(std::is_nothrow_move_assignable_v<sdl::texture_lock>);
+static_assert(std::is_trivially_copyable_v<sdl::vertex>);
+static_assert(std::is_aggregate_v<sdl::vertex>);
+static_assert(sizeof(sdl::vertex) == sizeof(SDL_Vertex));
+static_assert(
+    offsetof(sdl::vertex, position) == offsetof(SDL_Vertex, position)
+);
+static_assert(offsetof(sdl::vertex, color) == offsetof(SDL_Vertex, color));
+static_assert(
+    offsetof(sdl::vertex, tex_coord) == offsetof(SDL_Vertex, tex_coord)
+);
+static_assert(
+    static_cast<int>(sdl::vsync_mode::disabled) == SDL_RENDERER_VSYNC_DISABLED
+);
+static_assert(static_cast<int>(sdl::vsync_mode::every_refresh) == 1);
+static_assert(
+    static_cast<int>(sdl::vsync_mode::adaptive) == SDL_RENDERER_VSYNC_ADAPTIVE
+);
+static_assert(
+    static_cast<int>(sdl::logical_presentation_mode::disabled) ==
+    SDL_LOGICAL_PRESENTATION_DISABLED
+);
+static_assert(
+    static_cast<int>(sdl::logical_presentation_mode::stretch) ==
+    SDL_LOGICAL_PRESENTATION_STRETCH
+);
+static_assert(
+    static_cast<int>(sdl::logical_presentation_mode::letterbox) ==
+    SDL_LOGICAL_PRESENTATION_LETTERBOX
+);
+static_assert(
+    static_cast<int>(sdl::logical_presentation_mode::overscan) ==
+    SDL_LOGICAL_PRESENTATION_OVERSCAN
+);
+static_assert(
+    static_cast<int>(sdl::logical_presentation_mode::integer_scale) ==
+    SDL_LOGICAL_PRESENTATION_INTEGER_SCALE
+);
+static_assert(
+    static_cast<int>(sdl::texture_access::static_) == SDL_TEXTUREACCESS_STATIC
+);
+static_assert(
+    static_cast<int>(sdl::texture_access::streaming) ==
+    SDL_TEXTUREACCESS_STREAMING
+);
+static_assert(
+    static_cast<int>(sdl::texture_access::target) == SDL_TEXTUREACCESS_TARGET
+);
 static_assert(std::is_nothrow_move_constructible_v<sdl::surface_lock>);
 static_assert(std::is_nothrow_move_assignable_v<sdl::surface_lock>);
 

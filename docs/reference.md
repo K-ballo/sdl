@@ -23,6 +23,8 @@ http://www.boost.org/LICENSE_1_0.txt)
 | `<eggs/sdl/pixel_format.hpp>` | `pixel_format`, `name`, `bits_per_pixel`, `bytes_per_pixel`, `has_alpha` |
 | `<eggs/sdl/blend_mode.hpp>` | `blend_mode` |
 | `<eggs/sdl/surface.hpp>` | `scale_mode`, `flip_mode`, `surface`, `unique_surface`, `surface_lock` |
+| `<eggs/sdl/renderer.hpp>` | `vsync_mode`, `logical_presentation_mode`, `logical_presentation_info`, `texture_access`, `render_driver_count`, `render_driver`, `renderer`, `unique_renderer`, `texture`, `unique_texture`, `texture_lock` |
+| `<eggs/sdl/vertex.hpp>` | `vertex` |
 | `<eggs/sdl/time.hpp>` | `clock`, `performance_counter`, `performance_frequency`, `delay`, `delay_precise` |
 | `<eggs/sdl/keyboard.hpp>` | `scancode`, `keycode`, `key_modifiers`, `name` |
 | `<eggs/sdl/event.hpp>` | `event_type`, the event alternatives, `event`, the queue functions, `event_watch`, `event_filter` |
@@ -342,6 +344,178 @@ a `unique_surface`. `scale_mode::pixelart` and
 Surfaces may be created and loaded on any thread. A surface is used by one
 thread at a time, and `blit` and `blit_scaled` need exclusive use of both
 surfaces. Different surfaces may be used on different threads.
+
+---
+
+## Renderer
+
+The 2D render API: the renderer, textures, drawing, render targets, vsync
+and logical presentation. It needs SDL 3.2.0, no more. Textures are in the
+header of the renderer, since each names the other.
+
+```cpp
+enum class vsync_mode : int { disabled = 0, every_refresh = 1, adaptive = -1 };
+enum class logical_presentation_mode { disabled, stretch, letterbox, overscan, integer_scale };
+struct logical_presentation_info { extent size; logical_presentation_mode mode; };
+enum class texture_access { static_, streaming, target };
+struct vertex { fpoint position; fcolor color; fpoint tex_coord; };   // layout of SDL_Vertex
+
+auto render_driver_count() noexcept -> int;
+auto render_driver(int index) noexcept -> std::string_view;           // empty if out of range
+
+class renderer
+{
+  public:
+    static auto create(window target, char const* driver = nullptr) -> std::expected<unique_renderer, error>;
+    static auto create_software(surface target) -> std::expected<unique_renderer, error>;
+
+    auto handle() const noexcept -> SDL_Renderer*;
+    explicit operator bool() const noexcept;
+
+    auto name() const -> std::expected<std::string_view, error>;
+    auto get_window() const -> std::expected<window, error>;
+    auto output_size() const -> std::expected<extent, error>;
+
+    auto set_vsync(vsync_mode mode) const -> std::expected<void, error>;
+    auto get_vsync() const -> std::expected<vsync_mode, error>;
+
+    auto set_draw_color(rgba color) const -> std::expected<void, error>;
+    auto set_draw_color(fcolor color) const -> std::expected<void, error>;
+    auto draw_color() const -> std::expected<rgba, error>;
+    auto set_draw_blend_mode(blend_mode mode) const -> std::expected<void, error>;
+    auto get_draw_blend_mode() const -> std::expected<blend_mode, error>;
+    auto set_viewport(std::optional<rect> area) const -> std::expected<void, error>;
+    auto viewport() const -> std::expected<rect, error>;
+    auto set_clip_rect(std::optional<rect> area) const -> std::expected<void, error>;
+    auto clip_rect() const -> std::expected<rect, error>;
+    auto clip_enabled() const noexcept -> bool;
+    auto set_scale(fpoint scale) const -> std::expected<void, error>;
+    auto scale() const -> std::expected<fpoint, error>;
+
+    auto set_logical_presentation(extent size, logical_presentation_mode mode) const -> std::expected<void, error>;
+    auto logical_presentation() const -> std::expected<logical_presentation_info, error>;
+    auto coordinates_from_window(fpoint at) const -> std::expected<fpoint, error>;
+    auto coordinates_to_window(fpoint at) const -> std::expected<fpoint, error>;
+    auto convert_event_coordinates(event& e) const -> std::expected<void, error>;
+
+    auto set_target(texture target) const -> std::expected<void, error>;
+    auto reset_target() const -> std::expected<void, error>;
+    auto target() const noexcept -> texture;
+
+    auto clear() const -> std::expected<void, error>;
+    auto present() const -> std::expected<void, error>;
+    auto flush() const -> std::expected<void, error>;
+
+    auto draw_point(fpoint at) const -> std::expected<void, error>;
+    auto draw_points(std::span<fpoint const> points) const -> std::expected<void, error>;
+    auto draw_line(fpoint from, fpoint to) const -> std::expected<void, error>;
+    auto draw_lines(std::span<fpoint const> points) const -> std::expected<void, error>;
+    auto draw_rect(frect area) const -> std::expected<void, error>;
+    auto draw_rects(std::span<frect const> areas) const -> std::expected<void, error>;
+    auto fill_rect(frect area) const -> std::expected<void, error>;
+    auto fill_rects(std::span<frect const> areas) const -> std::expected<void, error>;
+
+    auto draw_texture(texture source, std::optional<frect> from = {}, std::optional<frect> to = {}) const
+        -> std::expected<void, error>;
+    auto draw_texture_rotated(texture source, std::optional<frect> from, std::optional<frect> to,
+                              double angle_degrees, std::optional<fpoint> center = {},
+                              flip_mode flip = flip_mode::none) const -> std::expected<void, error>;
+    auto draw_texture_tiled(texture source, std::optional<frect> from, float scale,
+                            std::optional<frect> to) const -> std::expected<void, error>;
+    auto draw_texture_9grid(texture source, std::optional<frect> from, float left, float right,
+                            float top, float bottom, float scale, std::optional<frect> to) const
+        -> std::expected<void, error>;
+
+    auto draw_geometry(texture source, std::span<vertex const> vertices, std::span<int const> indices = {}) const
+        -> std::expected<void, error>;
+    auto draw_debug_text(fpoint at, char const* text) const -> std::expected<void, error>;
+    auto read_pixels(std::optional<rect> area = {}) const -> std::expected<unique_surface, error>;
+};
+
+class texture
+{
+  public:
+    static auto create(renderer owner, pixel_format format, texture_access access, extent size)
+        -> std::expected<unique_texture, error>;
+    static auto from_surface(renderer owner, surface source) -> std::expected<unique_texture, error>;
+
+    auto handle() const noexcept -> SDL_Texture*;
+    explicit operator bool() const noexcept;
+
+    auto size() const noexcept -> extent;
+    auto format() const noexcept -> pixel_format;
+
+    auto update(std::optional<rect> area, std::span<std::byte const> pixels, int pitch) const
+        -> std::expected<void, error>;
+    auto lock(std::optional<rect> area = {}) const -> std::expected<texture_lock, error>;
+
+    auto set_color_mod(rgb color) const -> std::expected<void, error>;
+    auto color_mod() const -> std::expected<rgb, error>;
+    auto set_alpha_mod(std::uint8_t alpha) const -> std::expected<void, error>;
+    auto alpha_mod() const -> std::expected<std::uint8_t, error>;
+    auto set_blend_mode(blend_mode mode) const -> std::expected<void, error>;
+    auto get_blend_mode() const -> std::expected<blend_mode, error>;
+    auto set_scale_mode(scale_mode mode) const -> std::expected<void, error>;
+    auto get_scale_mode() const -> std::expected<scale_mode, error>;
+};
+
+class texture_lock   // move-only, unlocks when destroyed
+{
+  public:
+    auto pixels() const noexcept -> std::span<std::byte>;
+    auto pitch() const noexcept -> int;
+};
+```
+
+Rules:
+
+- **Frames.** Everything is drawn in floating point coordinates in the
+  current logical space, after the logical presentation, the scale and the
+  viewport. After `present` the back buffer is undefined: redraw every frame
+  in full. Do not `present` while a render target texture is set.
+- **Thread.** All render calls belong to the thread that created the
+  renderer, usually the main thread.
+- **Lifetimes.** The renderer must outlive its textures: destroying it
+  invalidates them, so destroy the textures first. A rendering function
+  called with a texture of another renderer fails. A window outlives its
+  renderer, and a surface outlives the software renderer made from it. None
+  of this is enforced.
+- **Window or renderer.** A window has either a renderer or a window surface
+  (`window::get_surface`), not both.
+- **Null rects.** A null `from` is the whole texture and a null `to` is the
+  whole render target.
+- **`create_software`** makes a renderer with no window: `get_window` and
+  `set_vsync` fail for it.
+- **`set_vsync`** can fail on some drivers, and `adaptive` is not supported
+  everywhere. Check the result.
+- **`set_draw_color`** has an `rgba` and an `fcolor` overload, so a braced
+  list is ambiguous: write `rgba{...}` or `fcolor{...}`. An `rgb` converts to
+  an `rgba`. `draw_color` returns 8 bits per channel.
+- **`convert_event_coordinates`** is for mouse and touch events. It changes
+  the coordinates stored in the event, so the alternatives extracted from it
+  afterwards carry logical coordinates, the ones extracted before do not.
+- **`draw_points`, `draw_lines`, `draw_rects`, `fill_rects`** and
+  `draw_geometry` with no elements succeed and draw nothing. Counts that do
+  not fit an `int` fail. `draw_lines` is a connected polyline.
+- **`draw_geometry`** with a null texture draws untextured triangles in the
+  colors of the vertices. Without indices the vertices are taken three at a
+  time.
+- **`draw_debug_text`** uses SDL's built-in 8 by 8 pixel font, ASCII only, in
+  the draw color, for tools and demos.
+- **`read_pixels`** returns a new surface that the caller owns, of the
+  viewport or the area of it, so the bars of a letterbox are not read. It is
+  slow and stalls the pipeline; read before `present`.
+- **`texture::create`** makes a texture of the pixel format, whose pixels are
+  not initialized. Render target textures are created with
+  `texture_access::target`. **`from_surface`** copies the pixels, the surface
+  can be released afterwards.
+- **`size` and `format`** read the public fields of `SDL_Texture`, so they do
+  not fail.
+- **`update`** fails when the span is smaller than the area, which for the
+  FourCC formats is only checked for their first plane.
+- **`lock`** is for streaming textures only. A `texture_lock` gives
+  write-only access to the locked area, as SDL defines it, and its span is
+  invalid once the lock is gone.
 
 ---
 

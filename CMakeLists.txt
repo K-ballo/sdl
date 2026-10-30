@@ -79,8 +79,10 @@ target_sources(
                 include/eggs/sdl/init.hpp
                 include/eggs/sdl/keyboard.hpp
                 include/eggs/sdl/pixel_format.hpp
+                include/eggs/sdl/renderer.hpp
                 include/eggs/sdl/surface.hpp
                 include/eggs/sdl/time.hpp
+                include/eggs/sdl/vertex.hpp
                 include/eggs/sdl/window.hpp
 )
 set_target_properties(

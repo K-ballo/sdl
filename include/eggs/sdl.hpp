@@ -16,6 +16,8 @@
 #include <eggs/sdl/init.hpp>         // IWYU pragma: export
 #include <eggs/sdl/keyboard.hpp>     // IWYU pragma: export
 #include <eggs/sdl/pixel_format.hpp> // IWYU pragma: export
+#include <eggs/sdl/renderer.hpp>     // IWYU pragma: export
 #include <eggs/sdl/surface.hpp>      // IWYU pragma: export
 #include <eggs/sdl/time.hpp>         // IWYU pragma: export
+#include <eggs/sdl/vertex.hpp>       // IWYU pragma: export
 #include <eggs/sdl/window.hpp>       // IWYU pragma: export

@@ -64,8 +64,14 @@ add_lib_test(window)
 add_lib_test(event)
 add_lib_test(surface)
 add_lib_test(time)
+add_lib_test(renderer)
 add_lib_test(window_demo Threads::Threads)
 add_lib_test(surface_demo Threads::Threads)
+add_lib_test(render_demo Threads::Threads)
+target_include_directories(
+    eggs.sdl.test.render_demo
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../example
+)
 target_include_directories(
     eggs.sdl.test.window_demo
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../example

@@ -40,6 +40,9 @@ types:
 - **`<eggs/sdl/surface.hpp>`** -- `surface`, `unique_surface` and
   `surface_lock`: surfaces that are created, loaded or borrowed from a
   window, with blits, fills, conversions and raw pixel access.
+- **`<eggs/sdl/renderer.hpp>`** -- `renderer`, `texture` and their owners:
+  the 2D render API with drawing, render targets, vsync and logical
+  presentation. **`<eggs/sdl/vertex.hpp>`** -- `vertex`, for geometry.
 - **`<eggs/sdl/geometry.hpp>`, `color.hpp`, `pixel_format.hpp`,
   `blend_mode.hpp`** -- the value types and enumerations of the above.
 - **`<eggs/sdl/time.hpp>`** -- `clock`, `delay` and the performance counter.
@@ -48,7 +51,7 @@ types:
   queue functions, watches and filters.
 - **`<eggs/sdl.hpp>`** -- all of the above.
 
-Renderer, GPU, audio, input state queries, properties and the other SDL
+GPU, audio, input state queries, properties and the other SDL
 subsystems are not wrapped yet.
 
 ## A window in a few lines

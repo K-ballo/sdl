@@ -59,6 +59,11 @@ changes. Re-acquire it with `get_surface` on `window_resized_event`,
 `window_pixel_size_changed_event` and `window_exposed_event` -- or simply
 on every frame, `get_surface` is cheap when the surface is still valid.
 
+The renderer is the other: a `texture` dies with the `renderer` that created it,
+so the renderer must outlive its textures, and a software renderer needs its
+surface for as long as it lives. Declare the owners in that order and they
+are destroyed in the opposite one.
+
 ## Errors
 
 Every fallible call returns `std::expected<T, error>`, and no function

@@ -51,12 +51,13 @@ int main()
 
 `example/window_demo.cpp` opens a window and paints its surface from the pointer position.
 `example/surface_demo.cpp` blits a moving sprite, drawn or loaded from a BMP file, onto the window surface.
+`example/render_demo.cpp` draws sprites, shapes and geometry with the 2D renderer, at a logical size.
 
 ## What it provides
 
 Error handling, init and quit, windows, the full set of SDL3 events, surfaces
 with their pixel formats, blending and raw pixel access, float geometry and
-color value types, and time. See [docs](docs/index.md) for the design and the
+color value types, the 2D renderer with textures, and time. See [docs](docs/index.md) for the design and the
 reference.
 
 ## License

@@ -172,6 +172,55 @@ auto const frame_start = sdl::clock::now();
 sdl::delay(std::chrono::milliseconds{16} - (sdl::clock::now() - frame_start));
 ```
 
+## The renderer
+
+To draw on the GPU, or with SDL's software renderer, create a renderer for
+the window. A window has either a renderer or a window surface, not both. The
+renderer must outlive its textures, so declare them after it:
+
+```cpp
+auto owned = sdl::renderer::create(window);
+if (!owned)
+    return fail(owned.error());
+sdl::renderer const renderer = owned->get();
+
+(void)renderer.set_vsync(sdl::vsync_mode::every_refresh);   // can fail on some drivers
+(void)renderer.set_logical_presentation(
+    {.width = 320, .height = 180}, sdl::logical_presentation_mode::letterbox
+);
+
+auto sprite = sdl::texture::from_surface(renderer, *surface);   // copies the pixels
+```
+
+Every frame is drawn in full and presented, the back buffer is undefined
+afterwards:
+
+```cpp
+(void)renderer.set_draw_color(sdl::rgba{.r = 20, .g = 24, .b = 40});
+(void)renderer.clear();
+(void)renderer.draw_texture(sprite->get(), {}, sdl::frect{.x = 10, .y = 10, .width = 32, .height = 32});
+(void)renderer.fill_rect({.x = 50, .y = 10, .width = 40, .height = 20});
+(void)renderer.draw_debug_text({.x = 8, .y = 8}, "hello");
+(void)renderer.present();
+```
+
+Name the type in `set_draw_color`, `rgba{...}` or `fcolor{...}`: a braced
+list fits both. Mouse events are in window coordinates, convert them to the
+logical ones before extracting the alternative:
+
+```cpp
+if (event.holds_alternative<sdl::mouse_motion_event>())
+    (void)renderer.convert_event_coordinates(event);
+if (auto const motion = event.get_if<sdl::mouse_motion_event>())
+    use(motion->x(), motion->y());
+```
+
+A render target texture is created with `texture_access::target`, drawn on
+between `set_target` and `reset_target`, and then drawn like any texture.
+A streaming texture is written through a `texture_lock`, whose span is
+invalid once the lock is gone. `read_pixels` returns what was drawn as a new
+surface, which `save_bmp` can write.
+
 ## The demos
 
 `example/window_demo.cpp` opens an 800 by 600 resizable window, repaints
@@ -185,3 +234,13 @@ surface and blits it every frame at a position that bounces with
 `sdl::clock::now()`, and once more scaled. The S key saves the window to
 `frame.bmp`, and the loop keeps to about 60 frames per second with
 `sdl::delay`. It exits on a quit request, a close request or the escape key.
+
+`example/render_demo.cpp` opens a resizable, high pixel density window with a
+renderer, vsync and a logical size of 320 by 180 with letterboxing. It draws
+a checkerboard texture, or the BMP file that is its first argument, bouncing
+and rotating, rectangles, lines, a triangle from `draw_geometry` with three
+vertex colors and the frames per second. The mouse position is converted to
+logical coordinates for a crosshair, the space key cycles the presentation
+between `letterbox` and `integer_scale`, and the S key saves a screenshot to
+`screenshot.bmp` with `read_pixels`. It exits on a quit request, a close
+request or the escape key.
